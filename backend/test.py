@@ -1,0 +1,1 @@
+# uv run python -c "from src.auth import auth; print(auth.create_access_token(user_id='8f19c64f-071c-44b3-abb5-00a31b4f8f8f', duration_in_minutes=60))"

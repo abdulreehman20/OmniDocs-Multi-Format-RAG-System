@@ -1,71 +1,69 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from propelauth_fastapi import User as AuthUser
+from sqlmodel import Session, select
 
-from src.schemas.item import Item, ItemCreate, ItemUpdate
+from src.auth import auth
+from src.db import get_session
+from src.models.item import Item, ItemCreate, ItemUpdate
+from src.models.user import User
 
 router = APIRouter(prefix="/items", tags=["items"])
 
-items: dict[int, Item] = {}
-_next_id = 1
 
-
-@router.get("", response_model=list[Item])
-def list_items() -> list[Item]:
-    return list(items.values())
+def _ensure_user(session: Session, auth_user: AuthUser) -> User:
+    user = session.get(User, auth_user.user_id)
+    if user is None:
+        user = User(
+            id=auth_user.user_id,
+            email=getattr(auth_user, "email", None),
+            first_name=getattr(auth_user, "first_name", None),
+            last_name=getattr(auth_user, "last_name", None),
+        )
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    return user
 
 
 @router.post("", response_model=Item, status_code=201)
-def create_item(body: ItemCreate) -> Item:
-    global _next_id
-    item = Item(id=_next_id, name=body.name, description=body.description)
-    items[item.id] = item
-    _next_id += 1
-    return item
-
-
-@router.get("/{item_id}", response_model=Item)
-def get_item(item_id: int) -> Item:
-    item = items.get(item_id)
-    if item is None:
-        raise HTTPException(status_code=404, detail="Item not found")
+def create_item(
+    body: ItemCreate,
+    session: Session = Depends(get_session),
+    current_user: AuthUser = Depends(auth.require_user),
+) -> Item:
+    owner = _ensure_user(session, current_user)
+    item = Item(name=body.name, description=body.description, owner_id=owner.id)
+    session.add(item)
+    session.commit()
+    session.refresh(item)
     return item
 
 
 @router.patch("/{item_id}", response_model=Item)
-def update_item(item_id: int, body: ItemUpdate) -> Item:
-    item = items.get(item_id)
-    if item is None:
+def update_item(
+    item_id: int,
+    body: ItemUpdate,
+    session: Session = Depends(get_session),
+    current_user: AuthUser = Depends(auth.require_user),
+) -> Item:
+    item = session.get(Item, item_id)
+    if item is None or item.owner_id != current_user.user_id:
         raise HTTPException(status_code=404, detail="Item not found")
-    updated = item.model_copy(update=body.model_dump(exclude_unset=True))
-    items[item_id] = updated
-    return updated
+    item.sqlmodel_update(body.model_dump(exclude_unset=True))
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
 
 
 @router.delete("/{item_id}", status_code=204)
-def delete_item(item_id: int) -> None:
-    if item_id not in items:
+def delete_item(
+    item_id: int,
+    session: Session = Depends(get_session),
+    current_user: AuthUser = Depends(auth.require_user),
+) -> None:
+    item = session.get(Item, item_id)
+    if item is None or item.owner_id != current_user.user_id:
         raise HTTPException(status_code=404, detail="Item not found")
-    del items[item_id]
-
-
-def _self_check() -> None:
-    global _next_id
-    items.clear()
-    _next_id = 1
-    created = create_item(ItemCreate(name="a", description="b"))
-    assert created.id == 1
-    updated = update_item(1, ItemUpdate(name="c"))
-    assert updated.name == "c" and updated.description == "b"
-    assert len(list_items()) == 1
-    delete_item(1)
-    try:
-        get_item(1)
-    except HTTPException as exc:
-        assert exc.status_code == 404
-    else:
-        raise AssertionError("expected 404")
-    items.clear()
-    _next_id = 1
-
-
-if __name__ == "__main__":
-    _self_check()
+    session.delete(item)
+    session.commit()
