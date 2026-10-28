@@ -10,6 +10,6 @@ settings = get_settings()
 engine = create_engine(settings.database_url_pooled, echo=settings.debug)
 
 
-def get_session() -> Generator[Session, None, None]:
+def get_session() -> Generator[Session]:
     with Session(engine) as session:
         yield session

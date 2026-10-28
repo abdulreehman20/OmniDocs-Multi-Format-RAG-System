@@ -7,8 +7,8 @@ from alembic import context
 from sqlmodel import SQLModel
 
 from src.config import get_settings
-import src.models.user  # noqa: F401
-import src.models.item  # noqa: F401
+import src.db.models  # noqa: F401
+
 
 config = context.config
 
