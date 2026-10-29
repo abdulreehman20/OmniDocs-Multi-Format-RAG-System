@@ -13,6 +13,7 @@ from src.db.models import (
     IngestionJob,
     OutboxEvent,
 )
+from src.services.corpus import bump_user_corpus_version
 from src.services.outbox import create_outbox_event, try_dispatch_outbox
 
 
@@ -188,6 +189,7 @@ def finalize_generation(
     job.progress = {"stage": "ready", "chunk_count": chunk_count}
     session.add(doc)
     session.add(job)
+    bump_user_corpus_version(session, doc.owner_id)
     session.commit()
 
 

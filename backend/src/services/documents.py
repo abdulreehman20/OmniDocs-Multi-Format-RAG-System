@@ -6,6 +6,7 @@ from sqlmodel import Session, col, select
 from src.config import Settings
 from src.db.models import Document, DocumentStatus
 from src.providers.protocols import ObjectStorage
+from src.services.corpus import bump_user_corpus_version
 from src.services.ingestion import cancel_jobs_for_document
 from src.services.outbox import create_outbox_event, try_dispatch_outbox
 
@@ -77,6 +78,7 @@ def request_delete(
     )
     session.add(doc)
     session.add(outbox)
+    bump_user_corpus_version(session, owner_id)
     session.commit()
     session.refresh(doc)
     session.refresh(outbox)

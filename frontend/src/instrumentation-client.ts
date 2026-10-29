@@ -4,14 +4,17 @@
 
 import * as Sentry from "@sentry/nextjs";
 
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+
 Sentry.init({
-  dsn: process.env.SENTRY_DSN,
+  dsn,
 
   // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
+  integrations: dsn ? [Sentry.replayIntegration()] : [],
 
   // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
   tracesSampleRate: 1,
+  enabled: Boolean(dsn),
 
   // Define how likely Replay events are sampled.
   // This sets the sample rate to be 10%. You may want this to be 100% while

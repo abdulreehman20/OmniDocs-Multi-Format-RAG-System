@@ -49,8 +49,27 @@ class Settings(BaseSettings):
     upload_url_expires_seconds: int = 300
     download_url_expires_seconds: int = 300
 
-    # Redis (Phase 4)
+    # Redis (Phase 4) — optional; fail-open when unset
     redis_url: str | None = None
+    redis_connect_timeout_seconds: float = 0.5
+    redis_socket_timeout_seconds: float = 0.5
+    cache_max_payload_bytes: int = 65_536
+    embedding_cache_ttl_seconds: int = 604_800  # 7 days
+    retrieval_cache_ttl_seconds: int = 1800  # 30 minutes
+    answer_cache_ttl_seconds: int = 600
+    answer_cache_enabled: bool = False
+    embedding_preprocess_version: str = "v1"
+    retrieval_policy_version: str = "baseline-v1"
+
+    # Eval (Phase 4 CLI)
+    eval_model_id: str = "openai/gpt-4o-mini"
+    eval_max_samples: int = 50
+    eval_max_concurrency: int = 2
+
+    # Maintenance
+    maintenance_dry_run: bool = False
+    abandoned_upload_ttl_seconds: int = 86_400
+    maintenance_batch_size: int = 50
 
     # Inngest
     inngest_app_id: str = "rag-basic"

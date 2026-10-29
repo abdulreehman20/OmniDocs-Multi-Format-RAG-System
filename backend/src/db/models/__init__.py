@@ -1,6 +1,7 @@
 from src.db.models.chunk import Chunk
 from src.db.models.conversation import Conversation
 from src.db.models.document import Document, DocumentSourceType, DocumentStatus
+from src.db.models.eval_run import EvalRun
 from src.db.models.ingestion_batch import IngestionBatch
 from src.db.models.ingestion_job import IngestionJob
 from src.db.models.message import Message
@@ -16,6 +17,7 @@ __all__ = [
     "Document",
     "DocumentSourceType",
     "DocumentStatus",
+    "EvalRun",
     "IngestionBatch",
     "IngestionJob",
     "Message",

@@ -18,6 +18,7 @@ from src.config import Settings
 from src.db.models import Conversation, Message, MessageCitation
 from src.providers.protocols import EmbeddingProvider, VectorStore
 from src.services import conversations as conversations_service
+from src.services.corpus import get_user_corpus_version
 
 
 def _now() -> datetime:
@@ -105,6 +106,7 @@ def create_assistant_placeholder(
     model_id: str,
     prompt_version_id: str | None,
     retrieval_config: dict[str, Any],
+    corpus_version: int | None = None,
 ) -> Message:
     msg = Message(
         conversation_id=conversation.id,
@@ -115,6 +117,7 @@ def create_assistant_placeholder(
         model_id=model_id,
         prompt_version_id=prompt_version_id,
         retrieval_config=retrieval_config,
+        corpus_version=corpus_version,
     )
     session.add(msg)
     session.commit()
@@ -253,6 +256,7 @@ def prepare_chat_turn(
             "source_labels": [s.label for s in retrieval.sources],
             "max_context_chunks": settings.max_context_chunks,
         },
+        corpus_version=get_user_corpus_version(session, owner_id),
     )
     return conversation, user_msg, assistant, retrieval.sources, prompt.template, history
 

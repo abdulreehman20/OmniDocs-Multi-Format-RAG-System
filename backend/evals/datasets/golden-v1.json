@@ -1,0 +1,166 @@
+{
+  "dataset_version": "golden-v1",
+  "description": "Seed golden set for Phase 4 CLI RAGAS / custom metrics. Expand toward 50–200 reviewed cases.",
+  "samples": [
+    {
+      "id": "ans-001",
+      "question": "What is the refund window for annual plans?",
+      "reference_answer": "Annual plans may be refunded within 14 days of purchase.",
+      "answerable": true,
+      "expected_filenames": ["billing-policy.md"],
+      "labels": ["exact", "policy"]
+    },
+    {
+      "id": "ans-002",
+      "question": "How many seats are included in the Team plan?",
+      "reference_answer": "The Team plan includes 10 seats.",
+      "answerable": true,
+      "expected_filenames": ["pricing.md"],
+      "labels": ["exact", "number"]
+    },
+    {
+      "id": "ans-003",
+      "question": "What is the support email address?",
+      "reference_answer": "support@example.com",
+      "answerable": true,
+      "expected_filenames": ["contact.txt"],
+      "labels": ["exact"]
+    },
+    {
+      "id": "unans-001",
+      "question": "What is the CEO's favorite color?",
+      "reference_answer": null,
+      "answerable": false,
+      "expected_filenames": [],
+      "labels": ["unanswerable"]
+    },
+    {
+      "id": "unans-002",
+      "question": "Did we win the 2019 industry award?",
+      "reference_answer": null,
+      "answerable": false,
+      "expected_filenames": [],
+      "labels": ["unanswerable"]
+    },
+    {
+      "id": "multi-001",
+      "question": "Summarize Team plan seats and the refund window together.",
+      "reference_answer": "Team plan includes 10 seats; annual plans have a 14-day refund window.",
+      "answerable": true,
+      "expected_filenames": ["pricing.md", "billing-policy.md"],
+      "labels": ["multi-doc"]
+    },
+    {
+      "id": "csv-001",
+      "question": "What was Q1 revenue for Widget Co?",
+      "reference_answer": "125000",
+      "answerable": true,
+      "expected_filenames": ["revenue.csv"],
+      "labels": ["csv", "number"]
+    },
+    {
+      "id": "csv-002",
+      "question": "Which product had the highest units sold in March?",
+      "reference_answer": "Alpha",
+      "answerable": true,
+      "expected_filenames": ["sales.csv"],
+      "labels": ["csv", "table"]
+    },
+    {
+      "id": "pdf-001",
+      "question": "On which page is the safety disclaimer defined?",
+      "reference_answer": "Page 3 contains the safety disclaimer.",
+      "answerable": true,
+      "expected_filenames": ["manual.pdf"],
+      "labels": ["pdf", "page"]
+    },
+    {
+      "id": "ans-004",
+      "question": "What timezone are system timestamps stored in?",
+      "reference_answer": "UTC",
+      "answerable": true,
+      "expected_filenames": ["architecture.md"],
+      "labels": ["exact"]
+    },
+    {
+      "id": "ans-005",
+      "question": "What is the maximum upload size in MiB?",
+      "reference_answer": "25",
+      "answerable": true,
+      "expected_filenames": ["limits.md"],
+      "labels": ["number"]
+    },
+    {
+      "id": "ans-006",
+      "question": "Which vector database stores embeddings?",
+      "reference_answer": "Pinecone",
+      "answerable": true,
+      "expected_filenames": ["architecture.md"],
+      "labels": ["exact"]
+    },
+    {
+      "id": "unans-003",
+      "question": "What is next quarter's confidential M&A target?",
+      "reference_answer": null,
+      "answerable": false,
+      "expected_filenames": [],
+      "labels": ["unanswerable"]
+    },
+    {
+      "id": "ans-007",
+      "question": "How many files can be selected per upload?",
+      "reference_answer": "6",
+      "answerable": true,
+      "expected_filenames": ["limits.md"],
+      "labels": ["number"]
+    },
+    {
+      "id": "multi-002",
+      "question": "List the support email and the max upload size.",
+      "reference_answer": "support@example.com; 25 MiB",
+      "answerable": true,
+      "expected_filenames": ["contact.txt", "limits.md"],
+      "labels": ["multi-doc"]
+    },
+    {
+      "id": "ans-008",
+      "question": "What embedding model dimension is used by default?",
+      "reference_answer": "1536",
+      "answerable": true,
+      "expected_filenames": ["architecture.md"],
+      "labels": ["number"]
+    },
+    {
+      "id": "ans-009",
+      "question": "Is Google Sheets sync supported?",
+      "reference_answer": "No, Google Sheets synchronization is excluded.",
+      "answerable": true,
+      "expected_filenames": ["scope.md"],
+      "labels": ["policy"]
+    },
+    {
+      "id": "ans-010",
+      "question": "Where should schema changes be applied?",
+      "reference_answer": "Through Alembic migrations only.",
+      "answerable": true,
+      "expected_filenames": ["architecture.md"],
+      "labels": ["exact"]
+    },
+    {
+      "id": "unans-004",
+      "question": "What is the private SSH key for production?",
+      "reference_answer": null,
+      "answerable": false,
+      "expected_filenames": [],
+      "labels": ["unanswerable"]
+    },
+    {
+      "id": "csv-003",
+      "question": "What is the unit price of SKU-42?",
+      "reference_answer": "19.99",
+      "answerable": true,
+      "expected_filenames": ["catalog.csv"],
+      "labels": ["csv", "number"]
+    }
+  ]
+}
