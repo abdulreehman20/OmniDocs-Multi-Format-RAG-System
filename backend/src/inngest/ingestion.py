@@ -18,6 +18,7 @@ from src.ai.ingestion.registry import IngestionParseError
 from src.config import get_settings
 from src.db.session import engine
 from src.inngest.client import get_inngest_client
+from src.observability.correlation import set_sentry_context
 from src.providers.runtime import get_embedding_provider, get_object_storage, get_vector_store
 from src.services import ingestion as ingestion_service
 from src.services.ingestion import IngestionConflictError
@@ -42,6 +43,14 @@ def ingest_document_uploaded(ctx: inngest.ContextSync) -> dict:
     job_id = str(data["job_id"])
     generation = int(data["generation"])
     owner_id = str(data["owner_id"])
+
+    run_id = getattr(ctx, "run_id", None)
+    set_sentry_context(
+        user_id=owner_id,
+        document_id=document_id,
+        job_id=job_id,
+        inngest_run_id=str(run_id) if run_id else None,
+    )
 
     settings = get_settings()
     storage = get_object_storage()

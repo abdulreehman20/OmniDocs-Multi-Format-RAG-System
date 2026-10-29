@@ -8,7 +8,10 @@ from sqlmodel import Session, col, select
 from src.ai.rag.types import RetrievedSource, RetrievalResult
 from src.config import Settings
 from src.db.models import Chunk, Document, DocumentStatus
-from src.providers.protocols import EmbeddingProvider, VectorStore
+from src.db.redis import cache_from_settings
+from src.providers.cache_keys import retrieval_cache_key, scope_from_documents
+from src.providers.protocols import Cache, EmbeddingProvider, VectorMatch, VectorStore
+from src.services.corpus import get_user_corpus_version
 
 
 def _cosine(a: list[float], b: list[float]) -> float:
@@ -80,6 +83,7 @@ def retrieve_for_chat(
     owner_id: str,
     documents: list[Document],
     query: str,
+    cache: Cache | None = None,
 ) -> RetrievalResult:
     if not documents:
         return RetrievalResult()
@@ -90,12 +94,49 @@ def retrieve_for_chat(
 
     query_vector = embeddings.embed_query(query)
     filt = build_pinecone_filter(owner_id=owner_id, documents=documents)
-    matches = vectors.query(
-        namespace=owner_id,
-        vector=query_vector,
-        top_k=settings.max_retrieval_candidates,
-        filter=filt,
+    corpus_version = get_user_corpus_version(session, owner_id)
+    scope = scope_from_documents(documents)
+    cache_client = cache if cache is not None else cache_from_settings(settings)
+    ret_key = retrieval_cache_key(
+        owner_id=owner_id,
+        corpus_version=corpus_version,
+        query=query,
+        retrieval_version=settings.retrieval_policy_version,
+        scope=scope,
     )
+    matches: list[VectorMatch] = []
+    cached = cache_client.get_json(ret_key)
+    if isinstance(cached, list):
+        for item in cached:
+            if not isinstance(item, dict) or "id" not in item:
+                continue
+            matches.append(
+                {
+                    "id": str(item["id"]),
+                    "score": float(item.get("score") or 0.0),
+                    "metadata": dict(item.get("metadata") or {}),
+                }
+            )
+    else:
+        matches = vectors.query(
+            namespace=owner_id,
+            vector=query_vector,
+            top_k=settings.max_retrieval_candidates,
+            filter=filt,
+        )
+        # Cache ids/scores/metadata only — hydrate text from Postgres.
+        cache_client.set_json(
+            ret_key,
+            [
+                {
+                    "id": m["id"],
+                    "score": m["score"],
+                    "metadata": m.get("metadata") or {},
+                }
+                for m in matches
+            ],
+            ttl_seconds=settings.retrieval_cache_ttl_seconds,
+        )
 
     if not matches:
         return RetrievalResult(filter_used=filt, candidate_count=0)

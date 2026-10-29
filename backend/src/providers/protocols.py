@@ -1,4 +1,12 @@
-from typing import Protocol, TypedDict
+from typing import Any, Protocol, TypedDict
+
+
+class Cache(Protocol):
+    def get_json(self, key: str) -> Any | None: ...
+
+    def set_json(self, key: str, value: Any, *, ttl_seconds: int) -> bool: ...
+
+    def delete(self, key: str) -> bool: ...
 
 
 class ObjectStorage(Protocol):

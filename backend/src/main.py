@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.router import api_router
 from src.config import get_settings
 from src.inngest.serve import register_inngest
+from src.observability.correlation import before_send_filter
+from src.observability.middleware import RequestIdMiddleware
 from src.providers.runtime import clear_provider_caches
 
 settings = get_settings()
@@ -18,6 +20,7 @@ if settings.sentry_dsn:
         profile_session_sample_rate=settings.sentry_profiles_sample_rate,
         profile_lifecycle="trace",
         environment=settings.environment,
+        before_send=before_send_filter,
     )
 
 
@@ -45,6 +48,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(RequestIdMiddleware)
 
 
 @app.get("/sentry-debug")
