@@ -8,13 +8,16 @@ from src.auth.jwt import verify_access_token
 from src.config import Settings, get_settings
 from src.db.models import User
 from src.db.session import get_session
-from src.providers.protocols import ObjectStorage
+from src.providers.protocols import EmbeddingProvider, ObjectStorage, VectorStore
+from src.providers.runtime import get_embedding_provider, get_vector_store
 from src.services.users import upsert_user_from_claims
 
 _bearer = HTTPBearer(auto_error=False)
 
 # Shared fake storage for ENVIRONMENT=test so upload + complete share state.
 _test_storage: ObjectStorage | None = None
+_test_embeddings: EmbeddingProvider | None = None
+_test_vectors: VectorStore | None = None
 
 
 def get_settings_dep() -> Settings:
@@ -32,6 +35,35 @@ def get_storage(settings: Annotated[Settings, Depends(get_settings_dep)]) -> Obj
     from src.db.s3_storage import Boto3ObjectStorage
 
     return Boto3ObjectStorage(settings)
+
+
+def get_embeddings(
+    settings: Annotated[Settings, Depends(get_settings_dep)],
+) -> EmbeddingProvider:
+    global _test_embeddings
+    if settings.environment == "test":
+        if _test_embeddings is None:
+            from src.providers.fakes import FakeEmbeddingProvider
+
+            _test_embeddings = FakeEmbeddingProvider(
+                model_id=settings.embedding_model_id,
+                dimension=8,
+            )
+        return _test_embeddings
+    return get_embedding_provider()
+
+
+def get_vectors(
+    settings: Annotated[Settings, Depends(get_settings_dep)],
+) -> VectorStore:
+    global _test_vectors
+    if settings.environment == "test":
+        if _test_vectors is None:
+            from src.providers.fakes import FakeVectorStore
+
+            _test_vectors = FakeVectorStore()
+        return _test_vectors
+    return get_vector_store()
 
 
 def get_current_user(
@@ -59,3 +91,5 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 DbSession = Annotated[Session, Depends(get_session)]
 AppSettings = Annotated[Settings, Depends(get_settings_dep)]
 Storage = Annotated[ObjectStorage, Depends(get_storage)]
+Embeddings = Annotated[EmbeddingProvider, Depends(get_embeddings)]
+Vectors = Annotated[VectorStore, Depends(get_vectors)]

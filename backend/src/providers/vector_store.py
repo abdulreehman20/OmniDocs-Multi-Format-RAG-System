@@ -1,7 +1,7 @@
 from pinecone import Pinecone
 
 from src.config import Settings
-from src.providers.protocols import VectorRecord
+from src.providers.protocols import VectorMatch, VectorRecord
 
 
 class PineconeVectorStore:
@@ -28,6 +28,32 @@ class PineconeVectorStore:
             for v in vectors
         ]
         self._index.upsert(vectors=payload, namespace=namespace)
+
+    def query(
+        self,
+        *,
+        namespace: str,
+        vector: list[float],
+        top_k: int,
+        filter: dict | None = None,
+    ) -> list[VectorMatch]:
+        result = self._index.query(
+            namespace=namespace,
+            vector=vector,
+            top_k=top_k,
+            filter=filter or {},
+            include_metadata=True,
+        )
+        matches: list[VectorMatch] = []
+        for m in result.get("matches") or []:
+            matches.append(
+                {
+                    "id": m["id"],
+                    "score": float(m.get("score") or 0.0),
+                    "metadata": dict(m.get("metadata") or {}),
+                }
+            )
+        return matches
 
     def delete_by_document_generation(
         self,

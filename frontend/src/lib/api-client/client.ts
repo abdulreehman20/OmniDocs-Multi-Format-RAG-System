@@ -2,9 +2,20 @@
 
 import { authClient } from "@/lib/auth/client";
 
-import type { DocumentRecord, UploadInitResponse, UploadLimits } from "./types";
+import type {
+  CitationRecord,
+  ConversationRecord,
+  DocumentRecord,
+  MessageRecord,
+  UploadInitResponse,
+  UploadLimits,
+} from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+export function getApiBase(): string {
+  return API_BASE;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -17,7 +28,7 @@ export class ApiError extends Error {
   }
 }
 
-async function getAccessToken(): Promise<string> {
+export async function getAccessToken(): Promise<string> {
   const { data, error } = await authClient.token();
   if (error || !data?.token) {
     throw new ApiError(401, error?.message || "Unable to obtain access token");
@@ -103,6 +114,52 @@ export function retryDocument(documentId: string) {
   return apiFetch<DocumentRecord>(`/api/v1/documents/${documentId}/retry`, {
     method: "POST",
   });
+}
+
+export function listConversations() {
+  return apiFetch<ConversationRecord[]>("/api/v1/conversations");
+}
+
+export function createConversation(input?: {
+  title?: string;
+  selected_document_ids?: string[];
+}) {
+  return apiFetch<ConversationRecord>("/api/v1/conversations", {
+    method: "POST",
+    body: JSON.stringify(input || {}),
+  });
+}
+
+export function getConversation(conversationId: string) {
+  return apiFetch<ConversationRecord>(`/api/v1/conversations/${conversationId}`);
+}
+
+export function updateConversation(
+  conversationId: string,
+  input: {
+    title?: string;
+    selected_document_ids?: string[];
+    archived?: boolean;
+  },
+) {
+  return apiFetch<ConversationRecord>(`/api/v1/conversations/${conversationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export function deleteConversation(conversationId: string) {
+  return apiFetch<ConversationRecord>(`/api/v1/conversations/${conversationId}`, {
+    method: "DELETE",
+  });
+}
+
+export function listMessages(conversationId: string) {
+  return apiFetch<MessageRecord[]>(`/api/v1/conversations/${conversationId}/messages`);
+}
+
+export function getCitation(citationId: string) {
+  return apiFetch<CitationRecord>(`/api/v1/citations/${citationId}`);
 }
 
 export async function putFileToPresignedUrl(
