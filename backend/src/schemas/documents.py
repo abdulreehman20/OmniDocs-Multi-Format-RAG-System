@@ -45,3 +45,19 @@ class LimitsResponse(BaseModel):
     max_file_size_bytes: int
     max_files_per_selection: int
     accepted_extensions: str
+
+
+class IngestionJobResponse(BaseModel):
+    id: str
+    document_id: str
+    generation: int
+    status: str
+    stage: str
+    attempts: int
+    error_code: str | None = None
+    error_message: str | None = None
+    progress: dict = {}
+    started_at: str | None = None
+    finished_at: str | None = None
+    created_at: str
+

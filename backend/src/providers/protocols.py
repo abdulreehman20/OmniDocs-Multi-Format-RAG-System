@@ -1,4 +1,4 @@
-from typing import Protocol
+from typing import Protocol, TypedDict
 
 
 class ObjectStorage(Protocol):
@@ -37,3 +37,33 @@ class ObjectStorage(Protocol):
         prefix: str,
         continuation: str | None = None,
     ) -> tuple[list[dict], str | None]: ...
+
+
+class EmbeddingProvider(Protocol):
+    @property
+    def model_id(self) -> str: ...
+
+    @property
+    def dimension(self) -> int: ...
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
+
+    def embed_query(self, text: str) -> list[float]: ...
+
+
+class VectorRecord(TypedDict):
+    id: str
+    values: list[float]
+    metadata: dict
+
+
+class VectorStore(Protocol):
+    def upsert(self, *, namespace: str, vectors: list[VectorRecord]) -> None: ...
+
+    def delete_by_document_generation(
+        self,
+        *,
+        namespace: str,
+        document_id: str,
+        generation: int,
+    ) -> None: ...

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.router import api_router
 from src.config import get_settings
-from src.inngest import register_inngest
+from src.inngest.serve import register_inngest
 
 settings = get_settings()
 
@@ -26,7 +26,14 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title=settings.app_name, lifespan=lifespan)
+app = FastAPI(
+    title=settings.app_name,
+    lifespan=lifespan,
+    description=(
+        "Use **POST /api/v1/auth/sign-in** or **/sign-up** to obtain an "
+        "`access_token`, then click **Authorize** and paste it as a Bearer token."
+    ),
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,

@@ -26,7 +26,16 @@ Health:
 - `GET /api/v1/health/live` — process up
 - `GET /api/v1/health/ready` — database reachable (no provider details leaked)
 
-Auth: FastAPI accepts Bearer JWTs from Neon Managed Better Auth (`authClient.token()`). JWKS at `{NEON_AUTH_BASE_URL}/.well-known/jwks.json`.
+Auth: FastAPI verifies Bearer JWTs from Neon Managed Better Auth (JWKS at `{NEON_AUTH_BASE_URL}/.well-known/jwks.json`).
+
+Swagger-friendly Neon Auth proxy (forwards to Managed Auth; does not store passwords):
+
+- `POST /api/v1/auth/sign-up` — body `{ name, email, password }` → `{ access_token, token_type, user }`
+- `POST /api/v1/auth/sign-in` — body `{ email, password }` → same
+- `GET /api/v1/auth/token` — uses session cookie from sign-in/up → fresh JWT
+- `POST /api/v1/auth/sign-out` — clears session
+
+In `/docs`: call sign-in → copy `access_token` → **Authorize** → Bearer → call protected APIs.
 
 ## Lint and tests
 
@@ -45,12 +54,14 @@ uv run pytest
 - `GET /api/v1/documents`, download, delete
 - Allowed types: `.md`, `.markdown`, `.txt`, `.pdf`, `.csv`, `.docx`
 
-## Inngest (smoke)
+## Inngest (ingestion)
 
 ```bash
 npx --yes inngest-cli@latest dev -u http://127.0.0.1:8000/api/inngest
 ```
 
-## Embeddings (later phases)
+Functions: `document/uploaded.v1` ingestion, `document/delete.requested.v1` cleanup, outbox reconcile (+ cron).
 
-Default: **`BAAI/bge-small-en-v1.5`** (local, 384-d).
+## Embeddings (Phase 2)
+
+OpenRouter via LangChain. Default: **`openai/text-embedding-3-small`** (1536-d). Configure `OPENROUTER_API_KEY`, `EMBEDDING_MODEL_ID`, `EMBEDDING_DIMENSION`, and a matching Pinecone index (`PINECONE_API_KEY` + `PINECONE_INDEX_HOST` or `PINECONE_INDEX_NAME`).

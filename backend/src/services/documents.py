@@ -6,6 +6,7 @@ from sqlmodel import Session, col, select
 from src.config import Settings
 from src.db.models import Document, DocumentStatus
 from src.providers.protocols import ObjectStorage
+from src.services.ingestion import cancel_jobs_for_document
 from src.services.outbox import create_outbox_event, try_dispatch_outbox
 
 
@@ -63,6 +64,7 @@ def request_delete(
     doc.status = DocumentStatus.DELETING
     doc.updated_at = now
     doc.status_message = "Deleting"
+    cancel_jobs_for_document(session, document_id)
     outbox = create_outbox_event(
         session,
         event_name="document/delete.requested.v1",

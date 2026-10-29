@@ -99,6 +99,12 @@ export function deleteDocument(documentId: string) {
   });
 }
 
+export function retryDocument(documentId: string) {
+  return apiFetch<DocumentRecord>(`/api/v1/documents/${documentId}/retry`, {
+    method: "POST",
+  });
+}
+
 export async function putFileToPresignedUrl(
   putUrl: string,
   file: File,
