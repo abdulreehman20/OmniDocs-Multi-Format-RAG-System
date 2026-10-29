@@ -1,18 +1,20 @@
 # Frontend (`rag-basic`)
 
-Next.js App Router UI (Bun + TypeScript + shadcn/ui).
+Next.js App Router UI (Bun + TypeScript + shadcn/ui + Neon Managed Better Auth).
 
 ## Setup
 
 ```bash
 cd frontend
 cp .env.example .env
-# Set NEXT_PUBLIC_API_BASE_URL (default http://localhost:8000)
+# Set NEON_AUTH_BASE_URL, NEON_AUTH_COOKIE_SECRET, NEXT_PUBLIC_API_BASE_URL
 bun install
 bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Protected routes: `/documents`, `/chat`, `/settings` (via `src/proxy.ts`).
 
 ## Scripts
 
@@ -21,5 +23,3 @@ bun run lint
 bun run build
 bun run start
 ```
-
-Auth UI (Neon Managed Better Auth) and RAG screens land in later phases. Dashboard routes under `src/app/(dashboard)/` are stubs until Phase 1+.

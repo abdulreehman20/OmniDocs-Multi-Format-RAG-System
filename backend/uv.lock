@@ -251,9 +251,9 @@ dependencies = [
     { name = "langchain" },
     { name = "langchain-openrouter" },
     { name = "langchain-pinecone" },
-    { name = "propelauth-fastapi" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
+    { name = "pyjwt", extra = ["crypto"] },
     { name = "ragas" },
     { name = "sentry-sdk" },
     { name = "sqlmodel" },
@@ -276,9 +276,9 @@ requires-dist = [
     { name = "langchain", specifier = ">=1.4.7" },
     { name = "langchain-openrouter", specifier = ">=0.2.9" },
     { name = "langchain-pinecone", specifier = ">=0.2.13" },
-    { name = "propelauth-fastapi", specifier = ">=4.4.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
     { name = "pydantic-settings", specifier = ">=2.16.1" },
+    { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.0" },
     { name = "ragas", specifier = ">=0.4.3" },
     { name = "sentry-sdk", specifier = ">=2.73.0" },
     { name = "sqlmodel", specifier = ">=0.0.48" },
@@ -2399,35 +2399,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/ef/8bae0a316d406644450522f2f3d44a4e19632f5f3bb60d1d0e6c53842616/propcache-0.5.4-cp315-cp315t-win_amd64.whl", hash = "sha256:02c0a34f16889cf800f10f0247a564d8ce6eeab6ffcd7c87198f769067eb8432", size = 48574, upload-time = "2026-09-16T00:17:10.077Z" },
     { url = "https://files.pythonhosted.org/packages/57/be/bcc053f66a97355683884b448198e79580fae8e8fa4d96b9bb01614e9913/propcache-0.5.4-cp315-cp315t-win_arm64.whl", hash = "sha256:dc4242ca653c9b30ab51c5f8193323e7bc0928f897ee9103201e59a43abcb72e", size = 45625, upload-time = "2026-09-16T00:17:11.377Z" },
     { url = "https://files.pythonhosted.org/packages/f5/cd/785c64ed382f3f04201870267b02783f63b4678c2acfddc177a3ebcc2727/propcache-0.5.4-py3-none-any.whl", hash = "sha256:62c60aec739ed00124573cce1178138fd690c7676352d67a37328c1cf51d7468", size = 16338, upload-time = "2026-09-16T00:17:13.106Z" },
-]
-
-[[package]]
-name = "propelauth-fastapi"
-version = "4.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "propelauth-py" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/59/78/5a2e8c3a980af22e359a4b3762f0b5c07b210348ca92c77a9e8a86d79c8c/propelauth_fastapi-4.4.0.tar.gz", hash = "sha256:fbb64cd6f8ee9be110c30b1f59f46317d6a115d543c4e085915886703ffe2ff3", size = 65585, upload-time = "2026-04-23T15:24:51.682Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c5/c6/6ff1a4bda2b72737b67b3893d8e046eecc50a876e5576052823f67b3ba59/propelauth_fastapi-4.4.0-py3-none-any.whl", hash = "sha256:5fe039da1dd3c7027d991c61a9c8ca14bae2289bf10ae22d71f852b28b1dd0fc", size = 9246, upload-time = "2026-04-23T15:24:50.269Z" },
-]
-
-[[package]]
-name = "propelauth-py"
-version = "4.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pyjwt", extra = ["crypto"] },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/34/90/d60021e27dc545624a5bd9b1e251f698d422e802b7ed7a5ff87e21cfa571/propelauth_py-4.4.0.tar.gz", hash = "sha256:0767ff4765db9eeb71a4097f3e92a890e6cd53422fcfa813e0ed03a8e048b5b4", size = 79546, upload-time = "2026-04-21T21:17:11.712Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/10/b330df852fc6776bb701218ed416a4a8aebf4308c521060568746d5ca018/propelauth_py-4.4.0-py3-none-any.whl", hash = "sha256:becad678dc9b42a3df3332dec692de93723ec9076fd8fffac2a0265b51577bae", size = 50237, upload-time = "2026-04-21T21:17:10.334Z" },
 ]
 
 [[package]]

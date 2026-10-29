@@ -1,22 +1,21 @@
-# ADR: Auth provider during Phase 0
+# ADR: Auth provider
 
 ## Status
 
-Accepted for Phase 0; revisit in Phase 1.
+Supersedes Phase 0 temporary PropelAuth decision. Accepted for Phase 1+.
 
 ## Context
 
 `docs/implementation.md` requires Neon Managed Better Auth with JWT verification in FastAPI.
-The repository currently uses PropelAuth (`propelauth-fastapi`) for `/whoami` and sample `/items` routes.
 
 ## Decision
 
-- Keep PropelAuth for Phase 0 so existing protected sample routes remain wired.
-- Do not implement Neon Managed Better Auth, Better Auth UI, or JWKS validation in Phase 0.
-- When `ENVIRONMENT=test`, use an offline test auth stub so unit tests and app import do not call PropelAuth over the network.
-- Phase 1 replaces PropelAuth with Neon Managed Better Auth and removes the temporary PropelAuth dependency.
+- Frontend: `@neondatabase/auth` (`createNeonAuth`, `auth.handler()`, Next.js 16 `proxy.ts`).
+- Backend: verify Bearer JWTs with PyJWT against `{NEON_AUTH_BASE_URL}/.well-known/jwks.json` (EdDSA/RS256/ES256).
+- `ENVIRONMENT=test` may use `JWT_TEST_SECRET` (HS256) so unit tests do not call Neon.
+- Application `users` table is a profile keyed by JWT `sub`; credentials/sessions stay in Neon Auth schema.
+- PropelAuth dependency and env vars are removed.
 
 ## Consequences
 
-- Production-like local runs still need valid `PROPELAUTH_*` credentials until Phase 1.
-- `.env.example` documents PropelAuth as temporary.
+Operators must enable Neon Auth on the Neon branch and set `NEON_AUTH_BASE_URL` / cookie secret on the frontend.
