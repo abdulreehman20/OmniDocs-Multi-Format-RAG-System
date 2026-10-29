@@ -3,11 +3,14 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { Copy, RefreshCw, Square } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
+import { MarkdownAnswer } from "@/components/chat/markdown-answer";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import {
   createConversation,
@@ -15,14 +18,13 @@ import {
   getAccessToken,
   getApiBase,
   getCitation,
-  listConversations,
+  getConversation,
   listDocuments,
   listMessages,
   updateConversation,
 } from "@/lib/api-client/client";
 import type {
   CitationRecord,
-  ConversationRecord,
   DocumentRecord,
   MessageRecord,
 } from "@/lib/api-client/types";
@@ -40,18 +42,24 @@ function formatLocator(locator: Record<string, unknown>): string {
   return entries.map(([k, v]) => `${k}: ${String(v)}`).join(" · ");
 }
 
+function formatDuration(ms: number | null | undefined): string | null {
+  if (ms == null || ms < 0) return null;
+  if (ms < 1000) return `${ms} ms`;
+  return `${(ms / 1000).toFixed(1)} s`;
+}
+
 export function ChatPanel() {
-  const [conversations, setConversations] = useState<ConversationRecord[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeId = searchParams.get("c");
+
   const [readyDocs, setReadyDocs] = useState<DocumentRecord[]>([]);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [persistedMessages, setPersistedMessages] = useState<MessageRecord[]>([]);
   const [input, setInput] = useState("");
   const [citationPreview, setCitationPreview] = useState<CitationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  const active = conversations.find((c) => c.id === activeId) || null;
+  const [loadingMessages, setLoadingMessages] = useState(false);
 
   const transport = useMemo(() => {
     return new DefaultChatTransport({
@@ -73,12 +81,8 @@ export function ChatPanel() {
         if (trigger === "regenerate-message") {
           return {
             api: `${getApiBase()}/api/v1/chat/regenerate`,
-            body: {
-              conversation_id: conversationId,
-            },
-            headers: {
-              Authorization: `Bearer ${await getAccessToken()}`,
-            },
+            body: { conversation_id: conversationId },
+            headers: { Authorization: `Bearer ${await getAccessToken()}` },
           };
         }
 
@@ -90,9 +94,7 @@ export function ChatPanel() {
             selected_document_ids: docs,
             idempotency_key: crypto.randomUUID(),
           },
-          headers: {
-            Authorization: `Bearer ${await getAccessToken()}`,
-          },
+          headers: { Authorization: `Bearer ${await getAccessToken()}` },
         };
       },
     });
@@ -107,7 +109,7 @@ export function ChatPanel() {
         const rows = await listMessages(activeId);
         setPersistedMessages(rows);
       } catch {
-        // ignore refresh errors; stream already showed answer
+        // stream already showed answer
       }
     },
     onError: (err) => setError(err.message),
@@ -115,39 +117,23 @@ export function ChatPanel() {
 
   const streaming = status === "streaming" || status === "submitted";
 
-  async function refreshSidebar() {
-    const [convs, docs] = await Promise.all([listConversations(), listDocuments()]);
-    setConversations(convs);
-    setReadyDocs(docs.filter((d) => d.status === "ready"));
-  }
-
   useEffect(() => {
-    startTransition(() => {
-      void (async () => {
-        try {
-          await refreshSidebar();
-        } catch (e) {
-          setError(e instanceof Error ? e.message : "Failed to load chat");
-        }
-      })();
-    });
+    void listDocuments()
+      .then((docs) => setReadyDocs(docs.filter((d) => d.status === "ready")))
+      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load documents"));
   }, []);
 
   useEffect(() => {
     if (!activeId) {
       setMessages([]);
       setPersistedMessages([]);
+      setSelectedDocIds([]);
       return;
     }
+    setLoadingMessages(true);
     void (async () => {
       try {
-        const [conv, rows] = await Promise.all([
-          listConversations().then((all) => all.find((c) => c.id === activeId)),
-          listMessages(activeId),
-        ]);
-        if (conv) {
-          setSelectedDocIds(conv.selected_document_ids || []);
-        }
+        const rows = await listMessages(activeId);
         setPersistedMessages(rows);
         setMessages(
           rows
@@ -160,20 +146,16 @@ export function ChatPanel() {
               }),
             ),
         );
+        const conv = await getConversation(activeId);
+        setSelectedDocIds(conv.selected_document_ids || []);
+        setError(null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load messages");
+      } finally {
+        setLoadingMessages(false);
       }
     })();
   }, [activeId, setMessages]);
-
-  async function handleNewChat() {
-    setError(null);
-    const conv = await createConversation({
-      selected_document_ids: selectedDocIds,
-    });
-    setConversations((prev) => [conv, ...prev]);
-    setActiveId(conv.id);
-  }
 
   async function toggleDoc(docId: string) {
     const next = selectedDocIds.includes(docId)
@@ -181,30 +163,24 @@ export function ChatPanel() {
       : [...selectedDocIds, docId];
     setSelectedDocIds(next);
     if (activeId) {
-      const updated = await updateConversation(activeId, {
-        selected_document_ids: next,
-      });
-      setConversations((prev) =>
-        prev.map((c) => (c.id === updated.id ? updated : c)),
-      );
+      await updateConversation(activeId, { selected_document_ids: next });
     }
   }
 
   async function handleSend() {
     if (!input.trim() || streaming) return;
     setError(null);
+    if (!selectedDocIds.length) {
+      setError("Select at least one ready document");
+      return;
+    }
     let conversationId = activeId;
     if (!conversationId) {
       const conv = await createConversation({
         selected_document_ids: selectedDocIds,
       });
-      setConversations((prev) => [conv, ...prev]);
       conversationId = conv.id;
-      setActiveId(conv.id);
-    }
-    if (!selectedDocIds.length) {
-      setError("Select at least one ready document");
-      return;
+      router.replace(`/chat?c=${encodeURIComponent(conv.id)}`);
     }
     const text = input.trim();
     setInput("");
@@ -219,10 +195,6 @@ export function ChatPanel() {
     );
   }
 
-  async function handleCopy(text: string) {
-    await navigator.clipboard.writeText(text);
-  }
-
   async function openCitation(citation: CitationRecord) {
     try {
       const fresh = await getCitation(citation.id);
@@ -231,6 +203,14 @@ export function ChatPanel() {
       setError(e instanceof Error ? e.message : "Citation unavailable");
     }
   }
+
+  const latencyById = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const m of persistedMessages) {
+      if (m.role === "assistant") map.set(m.id, m.latency_ms);
+    }
+    return map;
+  }, [persistedMessages]);
 
   const citationsByAssistant = useMemo(() => {
     const map = new Map<string, CitationRecord[]>();
@@ -243,49 +223,13 @@ export function ChatPanel() {
   }, [persistedMessages]);
 
   return (
-    <div className="grid min-h-[70vh] gap-4 lg:grid-cols-[220px_1fr_220px]">
-      <aside className="flex flex-col gap-2 border-r border-zinc-200 pr-3">
-        <Button type="button" onClick={() => void handleNewChat()} disabled={pending}>
-          New chat
-        </Button>
-        <ScrollArea className="h-[60vh]">
-          <ul className="space-y-1 text-sm">
-            {conversations.map((c) => (
-              <li key={c.id}>
-                <button
-                  type="button"
-                  className={`w-full rounded px-2 py-1.5 text-left hover:bg-zinc-100 ${
-                    c.id === activeId ? "bg-zinc-100 font-medium" : ""
-                  }`}
-                  onClick={() => setActiveId(c.id)}
-                >
-                  {c.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </ScrollArea>
-        {activeId ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="text-xs text-zinc-500"
-            onClick={() =>
-              void deleteConversation(activeId).then(() => {
-                setConversations((prev) => prev.filter((c) => c.id !== activeId));
-                setActiveId(null);
-              })
-            }
-          >
-            Delete chat
-          </Button>
-        ) : null}
-      </aside>
-
+    <div className="grid min-h-[70vh] gap-4 lg:grid-cols-[1fr_220px]">
       <section className="flex min-w-0 flex-col gap-3">
         <div className="flex flex-wrap gap-3 text-sm">
           {readyDocs.length === 0 ? (
-            <p className="text-zinc-500">No ready documents yet. Ingest files first.</p>
+            <p className="rounded-lg border border-dashed bg-zinc-50 px-3 py-2 text-zinc-500">
+              No ready documents yet. Upload and wait for ingestion on Documents.
+            </p>
           ) : (
             readyDocs.map((doc) => (
               <label key={doc.id} className="flex items-center gap-2">
@@ -293,7 +237,7 @@ export function ChatPanel() {
                   checked={selectedDocIds.includes(doc.id)}
                   onCheckedChange={() => void toggleDoc(doc.id)}
                 />
-                <span className="truncate max-w-[12rem]" title={doc.filename}>
+                <span className="max-w-[12rem] truncate" title={doc.filename}>
                   {doc.filename}
                 </span>
               </label>
@@ -302,59 +246,82 @@ export function ChatPanel() {
         </div>
 
         <ScrollArea className="h-[48vh] rounded border border-zinc-200 bg-white p-3">
-          <div className="space-y-4">
-            {messages.map((m) => {
-              const text = messageText(m);
-              const cites = citationsByAssistant.get(m.id) || [];
-              return (
-                <div
-                  key={m.id}
-                  className={`flex flex-col gap-1 ${
-                    m.role === "user" ? "items-end" : "items-start"
-                  }`}
-                >
+          {loadingMessages ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-3/4" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : messages.length === 0 ? (
+            <p className="py-10 text-center text-sm text-zinc-500">
+              {activeId
+                ? "Ask a question about your selected documents."
+                : "Select New Chat or a conversation from the sidebar to begin."}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((m) => {
+                const text = messageText(m);
+                const cites = citationsByAssistant.get(m.id) || [];
+                const duration = formatDuration(latencyById.get(m.id));
+                return (
                   <div
-                    className={`max-w-[85%] whitespace-pre-wrap rounded-lg px-3 py-2 text-sm ${
-                      m.role === "user"
-                        ? "bg-zinc-900 text-white"
-                        : "bg-zinc-100 text-zinc-900"
+                    key={m.id}
+                    className={`flex flex-col gap-1 ${
+                      m.role === "user" ? "items-end" : "items-start"
                     }`}
                   >
-                    {text || (streaming && m.role === "assistant" ? "…" : "")}
-                  </div>
-                  {m.role === "assistant" && text ? (
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 hover:text-zinc-800"
-                        onClick={() => void handleCopy(text)}
-                      >
-                        <Copy className="size-3" /> Copy
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 hover:text-zinc-800"
-                        disabled={streaming}
-                        onClick={() => void regenerate()}
-                      >
-                        <RefreshCw className="size-3" /> Regenerate
-                      </button>
-                      {cites.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          className="rounded border border-zinc-300 px-1.5 py-0.5 hover:bg-zinc-50"
-                          onClick={() => void openCitation(c)}
-                        >
-                          [{c.label}] {c.filename}
-                        </button>
-                      ))}
+                    <div
+                      className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                        m.role === "user"
+                          ? "whitespace-pre-wrap bg-zinc-900 text-white"
+                          : "bg-zinc-100 text-zinc-900"
+                      }`}
+                    >
+                      {m.role === "assistant" ? (
+                        text ? (
+                          <MarkdownAnswer text={text} />
+                        ) : streaming ? (
+                          "…"
+                        ) : null
+                      ) : (
+                        text
+                      )}
                     </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
+                    {m.role === "assistant" && text ? (
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 hover:text-zinc-800"
+                          onClick={() => void navigator.clipboard.writeText(text)}
+                        >
+                          <Copy className="size-3" /> Copy
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-1 hover:text-zinc-800"
+                          disabled={streaming}
+                          onClick={() => void regenerate()}
+                        >
+                          <RefreshCw className="size-3" /> Regenerate
+                        </button>
+                        {duration ? <span>{duration}</span> : null}
+                        {cites.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className="rounded border border-zinc-300 px-1.5 py-0.5 hover:bg-zinc-50"
+                            onClick={() => void openCitation(c)}
+                          >
+                            [{c.label}] {c.filename}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </ScrollArea>
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
@@ -365,6 +332,7 @@ export function ChatPanel() {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about your selected documents…"
             className="min-h-[72px]"
+            disabled={!readyDocs.length}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -374,7 +342,7 @@ export function ChatPanel() {
           />
           <div className="flex flex-col gap-2">
             {streaming ? (
-              <Button type="button" variant="outline" onClick={() => stop()}>
+              <Button type="button" variant="outline" onClick={() => stop()} aria-label="Stop">
                 <Square className="size-4" />
               </Button>
             ) : (
@@ -382,6 +350,20 @@ export function ChatPanel() {
                 Send
               </Button>
             )}
+            {activeId ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-xs text-zinc-500"
+                onClick={() =>
+                  void deleteConversation(activeId).then(() => {
+                    router.push("/chat");
+                  })
+                }
+              >
+                Delete
+              </Button>
+            ) : null}
           </div>
         </div>
       </section>
@@ -405,9 +387,6 @@ export function ChatPanel() {
         ) : (
           <p className="text-zinc-500">Open a citation to preview the locator.</p>
         )}
-        {active ? (
-          <p className="mt-6 text-xs text-zinc-400">Conversation {active.id.slice(0, 8)}…</p>
-        ) : null}
       </aside>
     </div>
   );

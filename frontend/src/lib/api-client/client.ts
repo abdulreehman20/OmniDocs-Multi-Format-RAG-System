@@ -6,6 +6,7 @@ import type {
   CitationRecord,
   ConversationRecord,
   DocumentRecord,
+  MeRecord,
   MessageRecord,
   UploadInitResponse,
   UploadLimits,
@@ -162,10 +163,25 @@ export function getCitation(citationId: string) {
   return apiFetch<CitationRecord>(`/api/v1/citations/${citationId}`);
 }
 
+export function getMe() {
+  return apiFetch<MeRecord>("/api/v1/me");
+}
+
+export function updateMe(input: {
+  display_name?: string | null;
+  preferences?: Record<string, unknown>;
+}) {
+  return apiFetch<MeRecord>("/api/v1/me", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
 export async function putFileToPresignedUrl(
   putUrl: string,
   file: File,
   onProgress?: (pct: number) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -182,6 +198,13 @@ export async function putFileToPresignedUrl(
     };
     xhr.onerror = () => reject(new Error("Upload network error"));
     xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
+    if (signal) {
+      if (signal.aborted) {
+        xhr.abort();
+        return;
+      }
+      signal.addEventListener("abort", () => xhr.abort(), { once: true });
+    }
     xhr.send(file);
   });
 }

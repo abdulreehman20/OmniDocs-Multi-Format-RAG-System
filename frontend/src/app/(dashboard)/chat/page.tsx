@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+
 import { ChatPanel } from "@/components/chat/chat-panel";
 
 export default function ChatPage() {
@@ -9,7 +11,11 @@ export default function ChatPage() {
           Ask questions over ready documents with grounded, cited answers.
         </p>
       </div>
-      <ChatPanel />
+      <Suspense
+        fallback={<p className="text-sm text-zinc-500">Loading chat…</p>}
+      >
+        <ChatPanel />
+      </Suspense>
     </div>
   );
 }

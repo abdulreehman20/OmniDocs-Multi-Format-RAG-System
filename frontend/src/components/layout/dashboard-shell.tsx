@@ -1,29 +1,20 @@
-import Link from "next/link";
 import { connection } from "next/server";
+import { Suspense } from "react";
 
-import { SignOutButton } from "@/components/layout/sign-out-button";
+import { DashboardNav } from "@/components/layout/dashboard-nav";
 import { auth } from "@/lib/auth/server";
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
   await connection();
   const { data: session } = await auth.getSession();
+  const userLabel = session?.user?.email || session?.user?.name || null;
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <nav className="flex items-center gap-4 text-sm font-medium">
-            <Link href="/documents">Documents</Link>
-            <Link href="/chat">Chat</Link>
-            <Link href="/settings">Settings</Link>
-          </nav>
-          <div className="flex items-center gap-3 text-sm text-zinc-600">
-            <span className="hidden sm:inline">{session?.user?.email || session?.user?.name}</span>
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
-      <div className="mx-auto max-w-5xl px-4 py-6">{children}</div>
+    <div className="flex min-h-screen flex-col bg-zinc-50 md:flex-row">
+      <Suspense fallback={<div className="hidden w-60 border-r bg-white md:block" />}>
+        <DashboardNav userLabel={userLabel} />
+      </Suspense>
+      <div className="min-w-0 flex-1 px-4 py-6 md:px-6">{children}</div>
     </div>
   );
 }

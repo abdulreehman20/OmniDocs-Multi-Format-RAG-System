@@ -62,3 +62,13 @@ export type MessageRecord = {
   created_at: string;
   citations: CitationRecord[];
 };
+
+export type MeRecord = {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  preferences: Record<string, unknown>;
+  corpus_version: number;
+  created_at: string;
+  updated_at: string;
+};
