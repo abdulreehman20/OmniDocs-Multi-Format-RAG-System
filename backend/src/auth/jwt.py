@@ -26,26 +26,19 @@ def verify_access_token(token: str) -> dict[str, Any]:
                 options={"require": ["sub", "exp"]},
             )
         else:
+            # Managed Better Auth signs with EdDSA; iss/aud are the Auth URL *origin*
+            # (e.g. https://ep-xx.neonauth….neon.tech), not …/neondb/auth.
+            issuer = settings.neon_auth_issuer
             client = _jwks_client(settings.jwks_url)
             signing_key = client.get_signing_key_from_jwt(token)
-            decode_kwargs: dict[str, Any] = {
-                "algorithms": ["EdDSA", "RS256", "ES256"],
-                "issuer": settings.neon_auth_base_url,
-                "options": {"require": ["sub", "exp"]},
-            }
-            # Audience is optional — only enforce when claim is present after decode
-            claims = jwt.decode(token, signing_key.key, **decode_kwargs)
-            if "aud" in claims and claims["aud"] not in (
-                settings.neon_auth_base_url,
-                [settings.neon_auth_base_url],
-            ):
-                # Allow string or list audiences that include issuer origin
-                aud = claims["aud"]
-                allowed = {settings.neon_auth_base_url}
-                if isinstance(aud, str) and aud not in allowed:
-                    raise jwt.InvalidAudienceError("Invalid audience")
-                if isinstance(aud, list) and not allowed.intersection(aud):
-                    raise jwt.InvalidAudienceError("Invalid audience")
+            claims = jwt.decode(
+                token,
+                signing_key.key,
+                algorithms=["EdDSA", "RS256", "ES256"],
+                issuer=issuer,
+                audience=issuer,
+                options={"require": ["sub", "exp"]},
+            )
     except HTTPException:
         raise
     except Exception as exc:

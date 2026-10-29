@@ -46,6 +46,7 @@ def get_current_user(
         )
     claims = verify_access_token(credentials.credentials)
     email = claims.get("email")
+    # Neon JWT may use "name"; some payloads also include "id" matching sub.
     name = claims.get("name")
     return upsert_user_from_claims(
         session,

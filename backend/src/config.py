@@ -1,5 +1,6 @@
-from functools import lru_cache
+from pathlib import Path
 from typing import Literal
+from urllib.parse import urlparse
 
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -61,13 +62,14 @@ class Settings(BaseSettings):
     # OpenRouter (embeddings Phase 2; chat Phase 3)
     openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    embedding_model_id: str = "openai/text-embedding-3-small"
-    embedding_dimension: int = 1536
+    embedding_model_id: str = "nvidia/nemotron-3.5-embed-1b:free"
+    embedding_dimension: int = 2048
 
-    # Pinecone
+    # Pinecone (document-schema index; dense field must match index schema)
     pinecone_api_key: str | None = None
     pinecone_index_host: str | None = None
     pinecone_index_name: str | None = None
+    pinecone_dense_field: str = "embeddings"
 
     # Ingestion / chunking
     chunker_version: str = "langchain-recursive-v1"
@@ -90,6 +92,19 @@ class Settings(BaseSettings):
     def strip_trailing_slash(cls, value: str) -> str:
         return value.rstrip("/")
 
+    @field_validator(
+        "pinecone_api_key",
+        "pinecone_index_host",
+        "pinecone_index_name",
+        "openrouter_api_key",
+        mode="before",
+    )
+    @classmethod
+    def strip_optional_quotes(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip().strip("\"'")
+        return value
+
     @model_validator(mode="after")
     def default_pooled_database_url(self) -> "Settings":
         if not self.database_url_pooled:
@@ -111,10 +126,49 @@ class Settings(BaseSettings):
         return f"{self.neon_auth_base_url}/.well-known/jwks.json"
 
     @property
+    def neon_auth_issuer(self) -> str:
+        """JWT iss/aud for Managed Better Auth is the URL origin, not the /auth path.
+
+        Neon docs: if base URL is https://ep-xx…/neondb/auth, iss/aud are https://ep-xx…
+        """
+        parsed = urlparse(self.neon_auth_base_url)
+        if not parsed.scheme or not parsed.netloc:
+            return self.neon_auth_base_url
+        return f"{parsed.scheme}://{parsed.netloc}"
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
-@lru_cache
+_settings: Settings | None = None
+_settings_env_mtime: float | None = None
+
+
+def _env_file_mtime() -> float | None:
+    # config.py lives in src/; .env is loaded from backend/ cwd (and optionally beside it)
+    for candidate in (Path.cwd() / ".env", Path(__file__).resolve().parents[1] / ".env"):
+        if candidate.is_file():
+            return candidate.stat().st_mtime
+    return None
+
+
 def get_settings() -> Settings:
-    return Settings()
+    """Load settings; re-read when backend/.env changes (dev-friendly)."""
+    global _settings, _settings_env_mtime
+    mtime = _env_file_mtime()
+    if _settings is None or mtime != _settings_env_mtime:
+        _settings = Settings()
+        _settings_env_mtime = mtime
+    return _settings
+
+
+def get_settings_cache_clear() -> None:
+    """Test helper — mirrors former get_settings.cache_clear()."""
+    global _settings, _settings_env_mtime
+    _settings = None
+    _settings_env_mtime = None
+
+
+# Back-compat for tests that call get_settings.cache_clear()
+get_settings.cache_clear = get_settings_cache_clear  # type: ignore[attr-defined]

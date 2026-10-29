@@ -3,22 +3,23 @@
 import { auth } from "@/lib/auth/server";
 
 /**
- * Best-effort: ensure the authenticated Neon Auth user exists in the app `users` table.
- * FastAPI `get_current_user` upserts on any authenticated request.
+ * Ensure the authenticated Neon Auth user exists in the app `users` table.
+ * FastAPI `get_current_user` upserts on any authenticated request (e.g. /limits).
  */
-export async function syncAppUser(): Promise<void> {
+export async function syncAppUser(): Promise<boolean> {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
   const { data, error } = await auth.token();
   if (error || !data?.token) {
-    return;
+    return false;
   }
 
   try {
-    await fetch(`${apiBase}/api/v1/limits`, {
+    const response = await fetch(`${apiBase}/api/v1/limits`, {
       headers: { Authorization: `Bearer ${data.token}` },
       cache: "no-store",
     });
+    return response.ok;
   } catch {
-    // Documents page will sync on first authenticated API call.
+    return false;
   }
 }

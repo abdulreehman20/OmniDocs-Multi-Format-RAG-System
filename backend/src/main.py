@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.api.router import api_router
 from src.config import get_settings
 from src.inngest.serve import register_inngest
+from src.providers.runtime import clear_provider_caches
 
 settings = get_settings()
 
@@ -23,6 +24,9 @@ if settings.sentry_dsn:
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Schema changes go through Alembic only — do not call create_all here.
+    # Re-read .env and drop stale Pinecone/S3/embedding clients after reload.
+    get_settings.cache_clear()
+    clear_provider_caches()
     yield
 
 

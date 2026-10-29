@@ -1,12 +1,16 @@
 import { Suspense } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { syncAppUser } from "@/lib/auth/sync-app-user";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // Upsert into app `users` on every dashboard visit (JWT → FastAPI → DB).
+  await syncAppUser();
+
   return (
     <Suspense
       fallback={

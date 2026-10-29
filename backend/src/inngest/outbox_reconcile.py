@@ -28,11 +28,3 @@ def reconcile_outbox(ctx: inngest.ContextSync) -> dict:
         return {"pending_seen": len(events), "dispatched": dispatched}
 
     return ctx.step.run("dispatch-pending", run)
-
-
-@client.create_function(
-    fn_id="outbox-reconcile-cron",
-    trigger=inngest.TriggerCron(cron="*/5 * * * *"),
-)
-def reconcile_outbox_cron(ctx: inngest.ContextSync) -> dict:
-    return reconcile_outbox(ctx)

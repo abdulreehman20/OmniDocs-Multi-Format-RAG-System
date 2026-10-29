@@ -2,9 +2,18 @@ import jwt
 import pytest
 from fastapi import HTTPException
 from src.auth.jwt import verify_access_token
+from src.config import get_settings
 from src.db.models import User
 
 from tests.conftest import make_token
+
+
+def test_neon_auth_issuer_is_url_origin() -> None:
+    """Managed Better Auth JWT iss/aud are the origin, not …/neondb/auth."""
+    settings = get_settings()
+    assert settings.neon_auth_base_url.endswith("/neondb/auth")
+    assert settings.neon_auth_issuer == "https://auth.example.neon.tech"
+    assert settings.jwks_url.endswith("/.well-known/jwks.json")
 
 
 def test_verify_valid_test_token() -> None:
