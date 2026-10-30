@@ -71,6 +71,20 @@ class Settings(BaseSettings):
     pinecone_index_name: str | None = None
     pinecone_dense_field: str = "embeddings"
 
+    # Chat / RAG (Phase 3)
+    chat_model_id: str = "nvidia/nemotron-3.5-lightning:free"
+    max_selected_documents_per_chat: int = 6
+    max_history_messages: int = 12
+    max_retrieval_candidates: int = 25
+    max_context_chunks: int = 5
+    max_context_tokens: int = 3000
+    # LLM HTTP read timeout; free OpenRouter models can be slow to first token.
+    chat_stream_timeout_seconds: int = 180
+    # How long the SSE request waits for Inngest embed+search before generating.
+    chat_retrieval_timeout_seconds: int = 120
+    # Legacy alias; unused when generation streams on the request path.
+    chat_bridge_timeout_seconds: int | None = None
+
     # Ingestion / chunking
     chunker_version: str = "langchain-recursive-v1"
     parser_version: str = "langchain-loaders-v1"

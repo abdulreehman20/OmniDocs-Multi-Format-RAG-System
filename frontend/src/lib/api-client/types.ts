@@ -28,3 +28,48 @@ export type UploadInitResponse = {
   object_key: string;
   expires_seconds: number;
 };
+
+export type ConversationRecord = {
+  id: string;
+  title: string;
+  selected_document_ids: string[];
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CitationRecord = {
+  id: string;
+  message_id: string;
+  label: string;
+  document_id: string;
+  chunk_id: string | null;
+  generation: number;
+  filename: string;
+  source_type: string | null;
+  locator: Record<string, unknown>;
+  excerpt: string | null;
+};
+
+export type MessageRecord = {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  status: string;
+  model_id: string | null;
+  latency_ms: number | null;
+  created_at: string;
+  progress_stage: string | null;
+  progress_label: string | null;
+  citations: CitationRecord[];
+};
+
+export type MeRecord = {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+  preferences: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};

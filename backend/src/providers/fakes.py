@@ -1,6 +1,26 @@
 from pathlib import Path
 
-from src.providers.protocols import VectorRecord
+from src.providers.protocols import VectorMatch, VectorRecord
+
+
+def _dot(a: list[float], b: list[float]) -> float:
+    n = min(len(a), len(b))
+    return sum(a[i] * b[i] for i in range(n))
+
+
+def _match_filter(metadata: dict, filt: dict | None) -> bool:
+    if not filt:
+        return True
+    for key, cond in filt.items():
+        value = metadata.get(key)
+        if isinstance(cond, dict):
+            if "$eq" in cond and value != cond["$eq"]:
+                return False
+            if "$in" in cond and value not in cond["$in"]:
+                return False
+        elif value != cond:
+            return False
+    return True
 
 
 class FakeObjectStorage:
@@ -110,6 +130,29 @@ class FakeVectorStore:
         bucket = self.vectors.setdefault(namespace, {})
         for v in vectors:
             bucket[v["id"]] = v
+
+    def query(
+        self,
+        *,
+        namespace: str,
+        vector: list[float],
+        top_k: int,
+        filter: dict | None = None,
+    ) -> list[VectorMatch]:
+        bucket = self.vectors.get(namespace, {})
+        scored: list[VectorMatch] = []
+        for vid, rec in bucket.items():
+            if not _match_filter(rec["metadata"], filter):
+                continue
+            scored.append(
+                {
+                    "id": vid,
+                    "score": _dot(vector, rec["values"]),
+                    "metadata": dict(rec["metadata"]),
+                }
+            )
+        scored.sort(key=lambda m: m["score"], reverse=True)
+        return scored[:top_k]
 
     def delete_by_document_generation(
         self,

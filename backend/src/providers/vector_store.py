@@ -1,7 +1,15 @@
-from pinecone import Pinecone
+from pinecone import DenseVectorQuery, Pinecone
 
 from src.config import Settings
-from src.providers.protocols import VectorRecord
+from src.providers.protocols import VectorMatch, VectorRecord
+
+_METADATA_FIELDS = (
+    "document_id",
+    "owner_id",
+    "generation",
+    "chunk_index",
+    "text_sha256",
+)
 
 
 class PineconeVectorStore:
@@ -31,6 +39,33 @@ class PineconeVectorStore:
             return
         documents = [_to_document(v, dense_field=self._dense_field) for v in vectors]
         self._index.documents.upsert(namespace=namespace, documents=documents)
+
+    def query(
+        self,
+        *,
+        namespace: str,
+        vector: list[float],
+        top_k: int,
+        filter: dict | None = None,
+    ) -> list[VectorMatch]:
+        result = self._index.documents.search(
+            namespace=namespace,
+            top_k=top_k,
+            score_by=[DenseVectorQuery(field=self._dense_field, values=vector)],
+            filter=filter or None,
+            include_fields=list(_METADATA_FIELDS),
+        )
+        matches: list[VectorMatch] = []
+        for doc in result.matches:
+            metadata = {key: doc.get(key) for key in _METADATA_FIELDS if doc.get(key) is not None}
+            matches.append(
+                {
+                    "id": doc.id,
+                    "score": float(doc.score or 0.0),
+                    "metadata": metadata,
+                }
+            )
+        return matches
 
     def delete_by_document_generation(
         self,

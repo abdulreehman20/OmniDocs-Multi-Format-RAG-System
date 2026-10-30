@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from inngest.fast_api import serve
 
+from src.inngest.chat import chat_message_requested
 from src.inngest.client import get_inngest_client
 from src.inngest.delete_document import document_delete_requested
 from src.inngest.ingestion import ingest_document_uploaded
@@ -17,5 +18,6 @@ def register_inngest(app: FastAPI) -> None:
             ingest_document_uploaded,
             document_delete_requested,
             reconcile_outbox,
+            chat_message_requested,
         ],
     )

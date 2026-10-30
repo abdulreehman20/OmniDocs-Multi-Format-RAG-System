@@ -57,8 +57,23 @@ class VectorRecord(TypedDict):
     metadata: dict
 
 
+class VectorMatch(TypedDict):
+    id: str
+    score: float
+    metadata: dict
+
+
 class VectorStore(Protocol):
     def upsert(self, *, namespace: str, vectors: list[VectorRecord]) -> None: ...
+
+    def query(
+        self,
+        *,
+        namespace: str,
+        vector: list[float],
+        top_k: int,
+        filter: dict | None = None,
+    ) -> list[VectorMatch]: ...
 
     def delete_by_document_generation(
         self,

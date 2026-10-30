@@ -58,8 +58,10 @@ def client(engine, session: Session) -> Generator[TestClient]:
     def _override_session() -> Generator[Session]:
         yield session
 
-    # Reset shared fake storage between tests
+    # Reset shared fakes between tests
     api_deps._test_storage = None
+    api_deps._test_embeddings = None
+    api_deps._test_vectors = None
     app.dependency_overrides[api_deps.get_session] = _override_session
     # Also override the imported get_session used by Depends(get_session)
     from src.db.session import get_session as real_get_session
@@ -71,6 +73,8 @@ def client(engine, session: Session) -> Generator[TestClient]:
 
     app.dependency_overrides.clear()
     api_deps._test_storage = None
+    api_deps._test_embeddings = None
+    api_deps._test_vectors = None
 
 
 def make_token(user_id: str, *, email: str | None = None, expired: bool = False) -> str:
