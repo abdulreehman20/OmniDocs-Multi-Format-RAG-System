@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     retrieval_policy_version: str = "baseline-v1"
 
     # Eval (Phase 4 CLI)
-    eval_model_id: str = "openai/gpt-4o-mini"
+    eval_model_id: str = "nvidia/nemotron-3.5-lightning:free"
     eval_max_samples: int = 50
     eval_max_concurrency: int = 2
 
