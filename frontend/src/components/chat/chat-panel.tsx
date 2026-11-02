@@ -390,7 +390,7 @@ export function ChatPanel() {
 
   return (
     <div className="grid min-h-[70vh] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,240px)]">
-      <section className="flex min-w-0 flex-col gap-4">
+      <section className="flex min-w-0 flex-col gap-6">
         <div className="flex flex-wrap gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm">
           {readyDocs.length === 0 ? (
             <p className="text-zinc-500">
@@ -417,7 +417,7 @@ export function ChatPanel() {
           </p>
         ) : null}
 
-        <ScrollArea className="h-[48vh] rounded-lg border border-zinc-200 bg-white p-4">
+        <ScrollArea className="h-[56vh] rounded-lg border border-zinc-200 bg-white p-4">
           {loadingMessages ? (
             <div className="space-y-3">
               <Skeleton className="h-16 w-3/4" />
@@ -430,7 +430,7 @@ export function ChatPanel() {
                 : "Select New Chat or a conversation from the sidebar to begin."}
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {messages.map((m) => {
                 const text = messageText(m);
                 const cites = citationsByAssistant.get(m.id) || [];

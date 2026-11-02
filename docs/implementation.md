@@ -212,7 +212,7 @@ Do not introduce an `apps/` directory, pnpm workspace, Turborepo or another mono
 
 The coding agent must inspect the existing files before creating or moving anything. Reuse existing implementations where appropriate and avoid overwriting working configuration.
 
-### 3.2 Target Repository Structure
+### 3.2     
 
 ```text
 rag-basic/
