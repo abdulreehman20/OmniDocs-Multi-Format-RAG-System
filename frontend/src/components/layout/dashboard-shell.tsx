@@ -3,9 +3,12 @@ import { Suspense } from "react";
 
 import { DashboardNav } from "@/components/layout/dashboard-nav";
 import { auth } from "@/lib/auth/server";
+import { syncAppUser } from "@/lib/auth/sync-app-user";
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
   await connection();
+  // Upsert into app `users` on every dashboard visit (JWT → FastAPI → DB).
+  await syncAppUser();
   const { data: session } = await auth.getSession();
   const userLabel = session?.user?.email || session?.user?.name || null;
 
